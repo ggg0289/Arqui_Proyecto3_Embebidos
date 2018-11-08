@@ -70,6 +70,17 @@ RH_RF69 rf69(RFM69_CS, RFM69_INT);
 
 int16_t packetnum = 0;  // packet counter, we increment per xmission
 
+int redLed = 37;            // pin A1: señal led rojo (Riego) 
+int greenLed = 38;          // pin A2: señal led verde (Ventilacion)
+int yellowLed = 39;         // pin A3: señal led amarillo (Lamparas)
+int ilumRef = 1.5;          // Tension de referencia de iluminacion (V)
+int tempRef = 1.5;          // Tension de referencia de temperatura
+int humeRef = 1.5;          // Tension de referencia de humedad
+int iluminacion;            // Tension del sensor de iluminacion
+int temperatura;            // Tension del sensor de temperatura
+int humedad;                // Tension del sendor de humedad
+int fc = 1023/3.3;          // Factor de conversion Tension -> bits
+
 void setup() 
 {
   Serial.begin(115200);
