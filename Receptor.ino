@@ -160,10 +160,10 @@ void imprimir(int i, int t, int h){
   Serial.print("Sensor de iluminacion: ");    //Imprime en consola la tension del sensor de iluminacion en voltios
   Serial.println(iluminacion/fc);
   Serial.print(" [V]");
-  Serial.print("Sensor de temperatura: ");    ////Imprime en consola la tension del sensor de temperatura en voltios
+  Serial.print("Sensor de temperatura: ");    ////Imprime en consola la tension del sensor de temperatura
   Serial.println(temperatura/fc);
   Serial.print(" [V]");
-  Serial.print("Sensor de temperatura: ");    ////Imprime en consola la tension del sensor de humedad en voltios
+  Serial.print("Sensor de temperatura: ");    ////Imprime en consola la tension del sensor de humedad
   Serial.println(temperatura/fc);
   Serial.print(" [V]");
 }
