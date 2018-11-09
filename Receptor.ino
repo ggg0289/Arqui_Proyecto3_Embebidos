@@ -344,7 +344,7 @@ void imprimir(int i, int t, int h){
   Serial.print("Sensor de temperatura: ");    // Imprime en consola la tension del sensor de temperatura
   Serial.print(t*fc);
   Serial.println(" [V]");
-  Serial.print("Sensor de temperatura: ");    // Imprime en consola la tension del sensor de humedad
+  Serial.print("Sensor de humedad: ");    // Imprime en consola la tension del sensor de humedad
   Serial.print(h*fc);
   Serial.println(" [V]");
   Serial.println("");
