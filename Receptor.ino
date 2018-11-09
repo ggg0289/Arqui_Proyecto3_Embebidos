@@ -108,13 +108,55 @@ void setup()
       String recibido = (char*)buf;               // Se asigna a la variable recibido el mensaje
       char recibidoC[12];                         // Variable Char para el mensaje
       recibido.toCharArray(recibidoC,12);         // Conversion a arreglo Char 
+     
       /* 
        * En el siguiente condigo se separa la entrada que contiene los datos del mensaje
        * en sus componentes respectivas, por lo que a la variable i se le asigna el valor
        * del mensaje correspondiente al sensor de Iluminacion, a la variable t se le 
        * asugna el valor correspondiente del sensor de Temperatura y a la variable h se 
        * le asigna el valor correpondiente del senso de Humedad.
+       * ************************* Funcionamiento de los bloques if ***********************************
+       * En el siguiente esquema se observa como se va asignando a las variables i, t y h los valores
+       * recibidos en el mensaje, el numero indica el item o los items del array recibidoC que componen
+       * a la variable correspondiente
+       * Digitos de h             digitos de t              digitos de i
+       * 4            *                       *******
+       * 4,5            *         2                 *
+       * 4,5,6        *                             *
+       *                                            *
+       * 5            *                              *
+       * 5,6            *        2,3                  *     0
+       * 5,6,7        *                              *
+       *                                            *
+       * 6            *                             *
+       * 6,7            *         2,3,4             *
+       * 6,7,8        *                       *******
+       * 
+       * 5            *                       *******
+       * 5,6            *         3                 *
+       * 5,6,7        *                             *
+       *                                            *
+       * 6            *                              *
+       * 6,7            *         3,4                 *     0,1
+       * 6,7,8        *                              *
+       *                                            *
+       * 7            *                             *
+       * 7,8            *         3,4,5             *
+       * 7,8,9        *                       *******
+       * 
+       * 6            *                       *******
+       * 6,7            *         4                 *
+       * 6,7,8        *                             *
+       *                                            *
+       * 7            *                              *
+       * 7,8            *         4,5                 *     0,1,2
+       * 7,8,9        *                              *
+       *                                            *
+       * 8            *                             *
+       * 8,9            *         4,5,6             *
+       * 8,9,10       *                       *******
        */
+     
       if(!isAlphaNumeric(recibidoC[1])){
         if(!isAlphaNumeric(recibidoC[3])){
           if(!isAlphaNumeric(recibidoC[5])){
