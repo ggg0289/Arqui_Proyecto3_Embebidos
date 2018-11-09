@@ -1,19 +1,14 @@
-// rf69 demo tx rx.pde
-// -*- mode: C++ -*-
-// Example sketch showing how to create a simple messageing client
-// with the RH_RF69 class. RH_RF69 class does not provide for addressing or
-// reliability, so you should only use RH_RF69  if you do not need the higher
-// level messaging abilities.
-// It is designed to work with the other example rf69_server.
-// Demonstrates the use of AES encryption, setting the frequency and modem 
-// configuration
-
 #include <SPI.h>
 #include <RH_RF69.h>
 
 /************ Radio Setup ***************/
 
-// Change to 434.0 or other frequency, must match RX's freq!
+//--------------Defina los valores de corte de voltaje, en voltios------------//
+ #define ilumRef    1.5
+ #define humeRef    1.5
+ #define tempRef    1.5
+
+// Frecuencia a la que desea enviar el mensaje!
 #define RF69_FREQ 915.0
 
 #if defined (__AVR_ATmega32U4__) // Feather 32u4 w/Radio
@@ -23,142 +18,263 @@
   #define LED           13
 #endif
 
-/*#if defined(ARDUINO_SAMD_FEATHER_M0) // Feather M0 w/Radio
-  #define RFM69_CS      8
-  #define RFM69_INT     3
-  #define RFM69_RST     4
-  #define LED           13
-#endif
-
-#if defined (__AVR_ATmega328P__)  // Feather 328P w/wing
-  #define RFM69_INT     3  // 
-  #define RFM69_CS      4  //
-  #define RFM69_RST     2  // "A"
-  #define LED           13
-#endif
-
-#if defined(ESP8266)    // ESP8266 feather w/wing
-  #define RFM69_CS      2    // "E"
-  #define RFM69_IRQ     15   // "B"
-  #define RFM69_RST     16   // "D"
-  #define LED           0
-#endif
-
-#if defined(ESP32)    // ESP32 feather w/wing
-  #define RFM69_RST     13   // same as LED
-  #define RFM69_CS      33   // "B"
-  #define RFM69_INT     27   // "A"
-  #define LED           13
-#endif*/
-
-/* Teensy 3.x w/wing
-#define RFM69_RST     9   // "A"
-#define RFM69_CS      10   // "B"
-#define RFM69_IRQ     4    // "C"
-#define RFM69_IRQN    digitalPinToInterrupt(RFM69_IRQ )
-*/
+ const int yellowLed = 9;   // pin xx: Salida led amarillo (Iluminacion)
+ const int greenLed = 10;   // pin xx: Salida led verde (temperatura)
+ const int redLed = 6;      // pin xx: Salida led rojo (humedad)
+ int l;                     // Variable Iluminacion
+ int t;                     // Variable Temperatura
+ int h;                     // Varible Humedad
  
-/* WICED Feather w/wing 
-#define RFM69_RST     PA4     // "A"
-#define RFM69_CS      PB4     // "B"
-#define RFM69_IRQ     PA15    // "C"
-#define RFM69_IRQN    RFM69_IRQ
-*/
-
-// Singleton instance of the radio driver
+// Instancia del driver del radio
 RH_RF69 rf69(RFM69_CS, RFM69_INT);
 
-int16_t packetnum = 0;  // packet counter, we increment per xmission
+int16_t packetnum = 0;  // Conteo de paquete, aumenta en cada transmision
 
-int redLed = 37;            // pin A1: señal led rojo (Riego) 
-int greenLed = 38;          // pin A2: señal led verde (Ventilacion)
-int yellowLed = 39;         // pin A3: señal led amarillo (Lamparas)
-int ilumRef = 1.5;          // Tension de referencia de iluminacion (V)
-int tempRef = 1.5;          // Tension de referencia de temperatura
-int humeRef = 1.5;          // Tension de referencia de humedad
-int iluminacion;            // Tension del sensor de iluminacion
-int temperatura;            // Tension del sensor de temperatura
-int humedad;                // Tension del sendor de humedad
-int fc = 1023/3.3;          // Factor de conversion Tension -> bits
 
 void setup() 
 {
-  Serial.begin(115200);
-  //while (!Serial) { delay(1); } // wait until serial console is open, remove if not tethered to computer
+  Serial.begin(115200);           // Inicio de la consola serial
+  //while (!Serial) { delay(1); } // Espera a que la consola este abierta
+  pinMode(yellowLed,OUTPUT);      // Definicion de salida led amarillo
+  pinMode(greenLed,OUTPUT);       // Definicion de salida led verde
+  pinMode(redLed,OUTPUT);         // Definicion de salida led rojo
+  pinMode(LED, OUTPUT);           // Definicion de salida led de la placa
+  pinMode(RFM69_RST, OUTPUT);     // Definicion de salida boton de reset
+  
+  digitalWrite(RFM69_RST, LOW);   // Se establece boton de reset en LOW
 
-  pinMode(LED, OUTPUT);     
-  pinMode(RFM69_RST, OUTPUT);
-  digitalWrite(RFM69_RST, LOW);
-
-  Serial.println("Feather RFM69 RX Test!");
-  Serial.println();
-
-  // manual reset
+  // Reseteo Manual
   digitalWrite(RFM69_RST, HIGH);
   delay(10);
   digitalWrite(RFM69_RST, LOW);
   delay(10);
   
   if (!rf69.init()) {
-    Serial.println("RFM69 radio init failed");
+    Serial.println("Inicio Fallido del radio RFM69");   //Mensaje de error por no iniciar el modulo
     while (1);
   }
-  Serial.println("RFM69 radio init OK!");
+  Serial.println("El radio RFM69 inicio correctamente");//Mensaje de inicializacion del modulo correcta
   
-  // Defaults after init are 434.0MHz, modulation GFSK_Rb250Fd250, +13dbM (for low power module)
-  // No encryption
+  // La frecuencia default es 434.0MHz, Modulacion GFSK_Rb250Fd250, +13dbM (Para modulo de baja potencia)
+  // Sin encriptacion
   if (!rf69.setFrequency(RF69_FREQ)) {
-    Serial.println("setFrequency failed");
+    Serial.println("Configuracion de Frecuencia Fallido");
   }
 
-  // If you are using a high power RF69 eg RFM69HW, you *must* set a Tx power with the
-  // ishighpowermodule flag set like this:
-  rf69.setTxPower(20, true);  // range from 14-20 for power, 2nd arg must be true for 69HCW
+  // Si se esta usando un modulo RF69 de alta potencia Ej: RFM69HW, se debe setiar la potencia del Transmisor
+  // con la ishighpowermodule flag setieada asi:
+  rf69.setTxPower(20, true);  // rango desde 14-20 para potencia, 2do argumento debe ser cierto para 69HCW
 
-  // The encryption key has to be the same as the one in the server
+  // Llave de encriptacion, debe ser la misma que en el receptor  
   uint8_t key[] = { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
                     0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08};
   rf69.setEncryptionKey(key);
   
-  pinMode(LED, OUTPUT);
+  pinMode(LED, OUTPUT);       //Definicion del led de la placa como salida
 
-  Serial.print("RFM69 radio @");  Serial.print((int)RF69_FREQ);  Serial.println(" MHz");
+  Serial.print("RFM69 radio @");  Serial.print((int)RF69_FREQ);  Serial.println(" MHz");  //Impresion de la frecuencia del Radio
 }
 
-
-void loop() {
+ float fc = 0.0032226;      //Factor de conversion 
+ 
+ void loop() {
  if (rf69.available()) {
-    // Should be a message for us now   
+    // Recibiendo el mensaje enviado por el modulo de transmision   
     uint8_t buf[RH_RF69_MAX_MESSAGE_LEN];
     uint8_t len = sizeof(buf);
     if (rf69.recv(buf, &len)) {
       if (!len) return;
       buf[len] = 0;
-      Serial.print("Received [");
+      Serial.print("Se recibió [");
       Serial.print(len);
-      Serial.print("]: ");
+      Serial.print("]caracteres: ");
       Serial.println((char*)buf);
-      Serial.print("RSSI: ");
+      Serial.print("RSSI(fuerza de la señal): ");
       Serial.println(rf69.lastRssi(), DEC);
-      imprimir(iluminacion, temperatura, humedad);   //Imprime los datos en Consola
-      comparador(iluminacion, temperatura, humedad); //Apaga o enciendo los Leds
-
-      if (strstr((char *)buf, "Hello World")) {
-        // Send a reply!
-        uint8_t data[] = "And hello back to you";
-        rf69.send(data, sizeof(data));
-        rf69.waitPacketSent();
-        Serial.println("Sent a reply");
-        Blink(LED, 40, 3); //blink LED 3 times, 40ms between blinks
-      }
+      
+      String recibido = (char*)buf;               // Se asigna a la variable recibido el mensaje
+      char recibidoC[12];                         // Variable Char para el mensaje
+      recibido.toCharArray(recibidoC,12);         // Conversion a arreglo Char 
+      /* 
+       * En el siguiente condigo se separa la entrada que contiene los datos del mensaje
+       * en sus componentes respectivas, por lo que a la variable i se le asigna el valor
+       * del mensaje correspondiente al sensor de Iluminacion, a la variable t se le 
+       * asugna el valor correspondiente del sensor de Temperatura y a la variable h se 
+       * le asigna el valor correpondiente del senso de Humedad.
+       */
+      if(!isAlphaNumeric(recibidoC[1])){
+        if(!isAlphaNumeric(recibidoC[3])){
+          if(!isAlphaNumeric(recibidoC[5])){
+            char temp[3]={recibidoC[4]};
+            h = atoi(temp);
+            }
+          else if(!isAlphaNumeric(recibidoC[6])){
+            char temp[3]={recibidoC[4],recibido[5]};
+            h = atoi(temp);
+            }
+          else{
+            char temp[3]={recibidoC[4],recibido[5],recibido[6]};
+            h = atoi(temp);
+            }
+          char temp[3]={recibidoC[2]};
+          t = atoi(temp);
+          }
+        else if(!isAlphaNumeric(recibidoC[4])){
+          if(!isAlphaNumeric(recibidoC[6])){
+            char temp[3]={recibidoC[5]};
+            h = atoi(temp);
+            }
+          else if(!isAlphaNumeric(recibidoC[7])){
+            char temp[3]={recibidoC[5],recibido[6]};
+            h = atoi(temp);
+            }
+          else{
+            char temp[3]={recibidoC[5],recibido[6],recibido[7]};
+            h = atoi(temp);
+            }
+          char temp[3]={recibidoC[2],recibido[3]};
+          t = atoi(temp);
+          }
+        else{
+          if(!isAlphaNumeric(recibidoC[7])){
+            char temp[3]={recibidoC[6]};
+            h = atoi(temp);
+            }
+          else if(!isAlphaNumeric(recibidoC[8])){
+            char temp[3]={recibidoC[6],recibido[7]};
+            h = atoi(temp);
+            }
+          else{
+            char temp[3]={recibidoC[6],recibido[7],recibido[8]};
+            h = atoi(temp);
+            }
+          char temp[3]={recibidoC[2],recibido[3],recibido[4]};
+          t = atoi(temp);
+          }  
+       
+        char luz[3]={recibidoC[0]};
+        l = atoi(luz);
+        }
+      else if(!isAlphaNumeric(recibidoC[2])){
+        if(!isAlphaNumeric(recibidoC[4])){
+          if(!isAlphaNumeric(recibidoC[6])){
+            char temp[3]={recibidoC[5]};
+            h = atoi(temp);
+            }
+          else if(!isAlphaNumeric(recibidoC[7])){
+            char temp[3]={recibidoC[5],recibido[6]};
+            h = atoi(temp);
+            }
+          else{
+            char temp[3]={recibidoC[5],recibido[6],recibido[7]};
+            h = atoi(temp);
+            }
+          char temp[3]={recibidoC[3]};
+          t = atoi(temp);
+          }
+        else if(!isAlphaNumeric(recibidoC[5])){
+          if(!isAlphaNumeric(recibidoC[7])){
+            char temp[3]={recibidoC[6]};
+            h = atoi(temp);
+            }
+          else if(!isAlphaNumeric(recibidoC[8])){
+            char temp[3]={recibidoC[6],recibido[7]};
+            h = atoi(temp);
+            }
+          else{
+            char temp[3]={recibidoC[6],recibido[7],recibido[8]};
+            h = atoi(temp);
+            }
+          char temp[3]={recibidoC[3],recibido[4]};
+          t = atoi(temp);
+          }
+        else{
+          if(!isAlphaNumeric(recibidoC[8])){
+            char temp[3]={recibidoC[7]};
+            h = atoi(temp);
+            }
+          else if(!isAlphaNumeric(recibidoC[9])){
+            char temp[3]={recibidoC[7],recibido[8]};
+            h = atoi(temp);
+            }
+          else{
+            char temp[3]={recibidoC[7],recibido[8],recibido[9]};
+            h = atoi(temp);
+            }
+          char temp[3]={recibidoC[3],recibido[4],recibido[5]};
+          t = atoi(temp);
+          } 
+        char luz[3]={recibidoC[0],recibido[1]};
+        l = atoi(luz);
+        
+      }else{
+        if(!isAlphaNumeric(recibidoC[5])){
+          if(!isAlphaNumeric(recibidoC[7])){
+            char temp[3]={recibidoC[6]};
+            h = atoi(temp);
+            }
+          else if(!isAlphaNumeric(recibidoC[8])){
+            char temp[3]={recibidoC[6],recibido[7]};
+            h = atoi(temp);
+            }
+          else{
+            char temp[3]={recibidoC[6],recibido[7],recibido[8]};
+            h = atoi(temp);
+            }
+          char temp[3]={recibido[4]};
+          t = atoi(temp);
+          }
+        else if(!isAlphaNumeric(recibidoC[6])){
+          if(!isAlphaNumeric(recibidoC[8])){
+            char temp[3]={recibidoC[7]};
+            h = atoi(temp);
+            }
+          else if(!isAlphaNumeric(recibidoC[9])){
+            char temp[3]={recibidoC[7],recibido[8]};
+            h = atoi(temp);
+            }
+          else{
+            char temp[3]={recibidoC[7],recibido[8],recibido[9]};
+            h = atoi(temp);
+            }
+          char temp[3]={recibido[4],recibido[5]};
+          t = atoi(temp);
+          }
+        else{
+          if(!isAlphaNumeric(recibidoC[9])){
+            char temp[3]={recibidoC[8]};
+            h = atoi(temp);
+            }
+          else if(!isAlphaNumeric(recibidoC[10])){
+            char temp[3]={recibidoC[8],recibido[9]};
+            h = atoi(temp);
+            }
+          else{
+            char temp[3]={recibidoC[8],recibido[9],recibido[10]};
+            h = atoi(temp);
+            }
+          char temp[3]={recibidoC[4],recibido[5],recibido[6]};
+          t = atoi(temp);
+          }  
+        char luz[3]={recibidoC[0],recibidoC[1], recibidoC[2]};
+        l = atoi(luz);
+        }
+      /*
+       * Se llaman a las funciones correspondientes para imprimir los datos en consola
+       * y encender los Leds respectivos
+       */
+      imprimir(l, t, h);    //Imprime los datos en Consola
+      comparador(l, t, h);  //Apaga o enciendo los Leds
+      Blink(LED, 40, 3);    //Llama a la funcion Blink
+      
     } else {
-      Serial.println("Receive failed");
+      Serial.println("Recepcion Fallida");  //Mensaje de error por recepcion fallida
     }
   }
 }
 
 
-void Blink(byte PIN, byte DELAY_MS, byte loops) {
+void Blink(byte PIN, byte DELAY_MS, byte loops) {   //Funcion para que el led de la placa parpadee
   for (byte i=0; i<loops; i++)  {
     digitalWrite(PIN,HIGH);
     delay(DELAY_MS);
@@ -166,36 +282,33 @@ void Blink(byte PIN, byte DELAY_MS, byte loops) {
     delay(DELAY_MS);
   }
 }
-
 void imprimir(int i, int t, int h){
-  Serial.print("Sensor de iluminacion: ");    //Imprime en consola la tension del sensor de iluminacion en voltios
-  Serial.println(iluminacion/fc);
-  Serial.print(" [V]");
-  Serial.print("Sensor de temperatura: ");    ////Imprime en consola la tension del sensor de temperatura
-  Serial.println(temperatura/fc);
-  Serial.print(" [V]");
-  Serial.print("Sensor de temperatura: ");    ////Imprime en consola la tension del sensor de humedad
-  Serial.println(temperatura/fc);
-  Serial.print(" [V]");
+  Serial.print("Sensor de iluminacion: ");    // Imprime en consola la tension del sensor de iluminacion en voltios
+  Serial.print(i*fc);
+  Serial.println(" [V]");
+  Serial.print("Sensor de temperatura: ");    // Imprime en consola la tension del sensor de temperatura
+  Serial.print(t*fc);
+  Serial.println(" [V]");
+  Serial.print("Sensor de temperatura: ");    // Imprime en consola la tension del sensor de humedad
+  Serial.print(h*fc);
+  Serial.println(" [V]");
+  Serial.println("");
 }
-
 void comparador(int i, int t, int h){
-  if(i >= ilumRef*fc){           //Si la señal de iluminacion es mayor que la ref
-    digitalWrite(yellowLed, HIGH);//se enciende el led amarillo
-  }
-  else{
-    digitalWrite(yellowLed, LOW);
-  }
-  
-  if(t >= tempRef*fc){           //Si la señal de temperatura es mayor que la ref
-    digitalWrite(greenLed, HIGH);         //se enciende el led verde
+  if( i*fc <= ilumRef){                   // Si la señal de iluminacion es menor que la ref
+    digitalWrite(greenLed, HIGH);         // se enciende el led amarillo
   }
   else{
     digitalWrite(greenLed, LOW);
   }
-    
-  if(h >= humeRef*fc){               //Si la señal de humedad es menor que la red
-    digitalWrite(redLed, HIGH);           //se enciende el led rojo
+  if(t*fc >= tempRef){                    // Si la señal de temperatura es mayor que la ref
+    digitalWrite(yellowLed, HIGH);        // se enciende el led verde
+  }
+  else{
+    digitalWrite(yellowLed, LOW);
+  }
+  if(h*fc >= humeRef){                    // Si la señal de humedad es menor que la red
+    digitalWrite(redLed, HIGH);           // se enciende el led rojo
   }
   else{
     digitalWrite(redLed, LOW);
