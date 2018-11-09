@@ -11,7 +11,7 @@
 
 #include <SPI.h>
 #include <RH_RF69.h>
-#define waitTime 1000
+#define waitTime 10000
 /************ Configuracion del Radio ***************/
 
 // Frecuencia a la que desea enviar el mensaje!
