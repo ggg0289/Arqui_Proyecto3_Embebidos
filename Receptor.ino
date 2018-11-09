@@ -1,3 +1,16 @@
+/* Proyecto_3
+ * Arquitectura de Computadoras I
+ * Esteban Gonzalez Gutierrez
+ * Jean Paul Jimenez Arias
+ * Samanta Solano Acuña
+ * ***********************Modulo Transmisor*************************
+ * Este modulo se encarga de recibir la señal enviada por el modulo
+ * transmisor con ayuda del modulo RadioHead69_RawDemo_rx. Luego con
+ * el mensaje recibido se separa en las señales correspondientes y se
+ * procede generar las señales de los actuadores, ademas de imprimir
+ * en la consola los valores de los sensores
+ */
+
 #include <SPI.h>
 #include <RH_RF69.h>
 
